@@ -21,6 +21,7 @@ pic7 = pygame.image.load('turn.png')
 pic8 = pygame.image.load('!turn.png')
 pic9 = pygame.image.load('win1.png')
 pic10 = pygame.image.load('win2.png')
+pic11 = pygame.image.load('wrong.png')
 
 screen = pygame.display.get_surface()
 
@@ -31,7 +32,7 @@ screen = pygame.display.get_surface()
 # Metoda change_player() kończy turę.
 class Pawns(object):
 
-    player_turn = 1
+    player_turn = 1     # Zaczynaja biale
     winner = False
     x, y = 0, 0
 
@@ -142,11 +143,12 @@ def can_move1():
 # Kolejne warunki, sprawdzające czy ruch może się odbyć.
 def can_move2(x0, y0):
     x1, y1 = Pawns.x, Pawns.y
-    if math.fabs(x1 - x0) > 1 or math.fabs(y1 - y0) > 1:
+    if (math.fabs(x1 - x0) == 1 and math.fabs(y1 - y0) == 0) \
+            or (math.fabs(y1 - y0) == 1 and math.fabs(x1 - x0) == 0):
+        if board[x1][y1].player == -1:
+            return True
+    else:
         return False
-    elif (math.fabs(x1 - x0) + math.fabs(y1 - y0)) == 2:
-        return False
-    return True
 
 
 # Sprawdza czy wybór pionka może się odbyć.
@@ -176,14 +178,42 @@ def move():
         pygame.event.get()
         if pygame.mouse.get_pressed() == (1, 0, 0):
             pos()
+    if Pawns.x == x and Pawns.y == y:
+        return False
+    if board[Pawns.x][Pawns.y].player == -1:
+        board[Pawns.x][Pawns.y].player = Pawns.player_turn
+        board[x][y].player = -1
+        change_players_turn()
+        refresh()
+        return True
+
+
+def can_capture(x0, y0):
+    x1, y1 = Pawns.x, Pawns.y
+    if (board[(x1 + x0) // 2][(y1 + y0) // 2].player == Pawns.player_turn) and\
+            ((math.fabs(x1 - x0) == 2 and math.fabs(y1 - y0) == 0)
+             or (math.fabs(y1 - y0) == 2 and math.fabs(x1 - x0) == 0))\
+            and board[Pawns.x][Pawns.y].player != -1:
+        return True
+    else:
+        pygame.display.flip()
+        screen.blit(pic11, (100, 100))
+        return False
+
+
+def capture():
+
+    x, y = Pawns.x, Pawns.y
+    deselect()
+    while not (can_move1() and (can_capture(x, y) or can_move2(x, y))):
+        pygame.event.get()
+        if pygame.mouse.get_pressed() == (1, 0, 0):
+            pos()
     board[Pawns.x][Pawns.y].player = Pawns.player_turn
     board[x][y].player = -1
     change_players_turn()
     refresh()
-
-
-def capture():
-    pass
+    return True
 
 
 menu()
@@ -199,7 +229,8 @@ while not Pawns.winner:
             pos()
             if can_select():
                 select()
-                move()
+                if not capture():
+                    continue
 
     check_winner()
 
