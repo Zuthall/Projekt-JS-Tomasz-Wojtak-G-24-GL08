@@ -1,41 +1,58 @@
-import pygame
+# Wczytanie wymaganych bibliotek.
 import sys
+
 import time
+
+import pygame
 from pygame.locals import *
+
 import math
 
 pygame.init()
 
-# Nazwa oraz romiar okna
+# Nazwa oraz wymiary okna.
 pygame.display.set_caption('Four Field Kono')
 length, width = 220, 220
 window_size = (length, width)
 window = pygame.display.set_mode(window_size)
+
+# Stałe wskazujące pewne miejsca na ekranie (środek okna, nazwa gracza, itp.).
+mid = (75, 100)
+player1_turn = (60, 210)
+player2_turn = (60, 0)
+
+# Przypisanie wartosci określających gracza
 none, black, white = range(-1, 2)
 
-# Wczytywanie grafik
-background = pygame.image.load('ground.png')
-black_pawn = pygame.image.load('black.png')
-white_pawn = pygame.image.load('white.png')
-blank_slot = pygame.image.load('clear.png')
-white_pawn_selected = pygame.image.load('white_selected.png')
-black_pawn_selected = pygame.image.load('black_selected.png')
-turn = pygame.image.load('turn.png')
-noturn = pygame.image.load('!turn.png')
-win_white = pygame.image.load('win1.png')
-win_black = pygame.image.load('win2.png')
-wrong_move = pygame.image.load('wrong.png')
 
-screen = pygame.display.get_surface()
+# Wczytywanie grafik.
+class Assets:
+    """Wczytuje grafiki."""
+
+    @staticmethod
+    def load():
+        Assets.background = pygame.image.load('ground.png')
+        Assets.black_pawn = pygame.image.load('black.png')
+        Assets.white_pawn = pygame.image.load('white.png')
+        Assets.blank_slot = pygame.image.load('clear.png')
+        Assets.white_pawn_selected = pygame.image.load('white_selected.png')
+        Assets.black_pawn_selected = pygame.image.load('black_selected.png')
+        Assets.turn = pygame.image.load('turn.png')
+        Assets.no_turn = pygame.image.load('!turn.png')
+        Assets.win_white = pygame.image.load('win1.png')
+        Assets.win_black = pygame.image.load('win2.png')
+        Assets.wrong_move = pygame.image.load('wrong.png')
+        Assets.screen = pygame.display.get_surface()
 
 
 # Player_turn odpowiada turze gracza który właśnie wykonuje ruch.
 # Jeśli ktoś wygra, rozgrywka kończy się.
-# Selected = 1 pozwala wyświetlić wybrany pionek, po wykonaniu ruch oznaczenie znika.
+# Selected = 1 pozwala wyświetlić wybrany pionek, po wykonaniu ruch oznaczenie jest usuwane.
 # Metoda change_player() kończy turę.
 class Pawns(object):
-
-    player_turn = white     # Zaczynaja biale
+    """Pozwala na utworzenie pionków które przechwoują informacje o tym,
+     czy są w danej chwili wybrane oraz o ich właścicielu."""
+    player_turn = white     # Zaczynaja biale, zmiana wartosci to zmiana tury gracza.
     winner = False
     x, y = 0, 0
 
@@ -93,12 +110,12 @@ def check_winner():
             elif board[i][j].player == black:
                 b += 1
     if a == 1:
-        screen.blit(win_white, (60, 60))
+        Assets.screen.blit(Assets.win_white, (60, 60))
         pygame.display.flip()
         time.sleep(2)
         Pawns.winner = True
     elif b == 1:
-        screen.blit(win_black, (60, 60))
+        Assets.screen.blit(Assets.win_black, (60, 60))
         pygame.display.flip()
         time.sleep(2)
         Pawns.winner = True
@@ -106,7 +123,7 @@ def check_winner():
 
 # Wyświetla i odświeża tło
 def menu():
-    screen.blit(background, (0, 0))
+    Assets.screen.blit(Assets.background, (0, 0))
     pygame.display.flip()
 
 
@@ -114,23 +131,25 @@ def menu():
 # jeśli dane są prawdziwe, wyświetla je w odpowiednim miejscu.
 def refresh():
     for i in range(0, 4):
+        place1 = 10 + i * 50
         for j in range(0, 4):
+            place2 = 10 + j * 50
             if board[i][j].player == black:
-                screen.blit(black_pawn, (10 + i * 50, 10 + j * 50))
+                Assets.screen.blit(Assets.black_pawn, (place1, place2))
                 if board[i][j].selected == 1:
-                    screen.blit(black_pawn_selected, (10 + i * 50, 10 + j * 50))
+                    Assets.screen.blit(Assets.black_pawn_selected, (place1, place2))
             elif board[i][j].player == white:
-                screen.blit(white_pawn, (10 + i * 50, 10 + j * 50))
+                Assets.screen.blit(Assets.white_pawn, (place1, place2))
                 if board[i][j].selected == 1:
-                    screen.blit(white_pawn_selected, (10 + i * 50, 10 + j * 50))
+                    Assets.screen.blit(Assets.white_pawn_selected, (place1, place2))
             elif board[i][j].player == none:
-                screen.blit(blank_slot, (10 + i * 50, 10 + j * 50))
+                Assets.screen.blit(Assets.blank_slot, (place1, place2))
             if Pawns.player_turn == black:
-                screen.blit(noturn, (60, 210))
-                screen.blit(turn, (60, 0))
+                Assets.screen.blit(Assets.no_turn, player1_turn)
+                Assets.screen.blit(Assets.turn, player2_turn)
             elif Pawns.player_turn == white:
-                screen.blit(noturn, (60, 0))
-                screen.blit(turn, (60, 210))
+                Assets.screen.blit(Assets.no_turn, player2_turn)
+                Assets.screen.blit(Assets.turn, player1_turn)
     pygame.display.flip()
     pygame.event.get()
 
@@ -159,36 +178,23 @@ def can_select():
     if (4 > (Pawns.x + i) >= 0 and 4 > (Pawns.y + i) >= 0 for i in [-1, 1]):
         if board[Pawns.x][Pawns.y].player == Pawns.player_turn:
             return True
+        else:
+            Assets.screen.blit(Assets.wrong_move, mid)
+            pygame.display.flip()
+    Assets.screen.blit(Assets.wrong_move, mid)
+    pygame.display.flip()
     return False
 
 
 # Zaznacza pionek
-def select():
-    board[Pawns.x][Pawns.y].selected = 1
+def select(x, y):
+    board[x][y].selected = 1
     refresh()
 
 
 # Odznacza pionek
-def deselect():
-    board[Pawns.x][Pawns.y].selected = 0
-
-
-# Przesuwa pionek
-def move():
-    x, y = Pawns.x, Pawns.y
-    deselect()
-    while not (can_move2(x, y) and can_move1()):
-        pygame.event.get()
-        if pygame.mouse.get_pressed() == (1, 0, 0):
-            pos()
-    if Pawns.x == x and Pawns.y == y:
-        return False
-    if board[Pawns.x][Pawns.y].player == none:
-        board[Pawns.x][Pawns.y].player = Pawns.player_turn
-        board[x][y].player = none
-        change_players_turn()
-        refresh()
-        return True
+def deselect(x, y):
+    board[x][y].selected = 0
 
 
 def can_capture(x0, y0):
@@ -200,14 +206,16 @@ def can_capture(x0, y0):
         return True
     else:
         pygame.display.flip()
-        screen.blit(wrong_move, (100, 100))
+        Assets.screen.blit(Assets.wrong_move, mid)
         return False
 
 
-def capture():
+# Jeśli wszystkie wymagania do wykonania ruchu/przejęcia są spełnione to
+# zostanie wykonany, odpowiednio, ruch lub przejęcie.
+def capture_or_move():
 
     x, y = Pawns.x, Pawns.y
-    deselect()
+    deselect(x, y)
     while not (can_move1() and (can_capture(x, y) or can_move2(x, y))):
         pygame.event.get()
         if pygame.mouse.get_pressed() == (1, 0, 0):
@@ -219,7 +227,8 @@ def capture():
     return True
 
 
-def start():
+def main():
+    Assets.load()
     menu()
     refresh()
 
@@ -232,12 +241,12 @@ def start():
             elif pygame.mouse.get_pressed() == (1, 0, 0):
                 pos()
                 if can_select():
-                    select()
-                    if not capture():
-                        continue
+                    select(Pawns.x, Pawns.y)
+                    capture_or_move()
 
         check_winner()
 
 
-start()
+if __name__ == '__main__':
+    main()
 
