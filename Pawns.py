@@ -1,5 +1,12 @@
+# -- STEROWANIE --
+# Aby wybrać a następnie poruszyć pionek, trzeba użyć lewego przycisku myszy.
+# !! Jeśli chcemy anulować wybór pionka należy wcisnąć prawy przycisk myszy. !!
+# Wciśnij klawisz escape aby wyłączyć program.
+
 # Wczytanie wymaganych bibliotek.
 import sys
+
+import unittest
 
 import time
 
@@ -68,10 +75,12 @@ class Pawns(object):
 
 
 # Dwuwymiaorwa plansza, na wzór:
-# 0 0 0 0
-# 0 0 0 0
-# 1 1 1 1
-# 1 1 1 1
+
+#   0 0 0 0
+#   0 0 0 0
+#   1 1 1 1
+#   1 1 1 1
+
 # Jedynki oznaczają pionki gracza drugiego, natomiast zera, gracza pierwszego.
 # Jedynki oraz zera są zapisane są w komórkach 'player'.
 board = [[Pawns(0, False) if i < 2 else Pawns(1, False) for i in range(0, 4)] for j in range(0, 4)]
@@ -121,7 +130,7 @@ def check_winner():
         Pawns.winner = True
 
 
-# Wyświetla i odświeża tło
+# Wyświetla i odświeża tło.
 def menu():
     Assets.screen.blit(Assets.background, (0, 0))
     pygame.display.flip()
@@ -155,6 +164,7 @@ def refresh():
 
 
 # Sprawdza czy ruch może się odbyć.
+# Jeśli użytkownik kliknie poza planszę lub wybierze własny pionek to funkcja zwróci False.
 def can_move1():
     if board[Pawns.x][Pawns.y].player != Pawns.player_turn:
         if (4 > (Pawns.x + i) >= 0 and 4 > (Pawns.y + i) >= 0 for i in [-1, 1]):
@@ -181,12 +191,10 @@ def can_select():
         else:
             Assets.screen.blit(Assets.wrong_move, mid)
             pygame.display.flip()
-    Assets.screen.blit(Assets.wrong_move, mid)
-    pygame.display.flip()
     return False
 
 
-# Zaznacza pionek
+# Zaznacza pionek.
 def select(x, y):
     board[x][y].selected = 1
     refresh()
@@ -197,6 +205,7 @@ def deselect(x, y):
     board[x][y].selected = 0
 
 
+# Funkcja sprawdzająca czy można przejąc pionek w określonej sytuacji.
 def can_capture(x0, y0):
     x1, y1 = Pawns.x, Pawns.y
     if (board[(x1 + x0) // 2][(y1 + y0) // 2].player == Pawns.player_turn) and\
@@ -211,7 +220,7 @@ def can_capture(x0, y0):
 
 
 # Jeśli wszystkie wymagania do wykonania ruchu/przejęcia są spełnione to
-# zostanie wykonany, odpowiednio, ruch lub przejęcie.
+# zostanie wykonany, odpowiednio, ruch bądź przejęcie.
 def capture_or_move():
 
     x, y = Pawns.x, Pawns.y
@@ -220,6 +229,17 @@ def capture_or_move():
         pygame.event.get()
         if pygame.mouse.get_pressed() == (1, 0, 0):
             pos()
+            if board[Pawns.x][Pawns.y].player == Pawns.player_turn and (Pawns.x != x and Pawns.y != y):
+                pygame.display.flip()
+                Assets.screen.blit(Assets.wrong_move, mid)
+        if pygame.mouse.get_pressed() == (0, 0, 1):
+            print("elo")
+            deselect(x, y)
+            refresh()
+            return False
+    if board[Pawns.x][Pawns.y].player == Pawns.player_turn and (Pawns.x != x and Pawns.y != y):
+        pygame.display.flip()
+        Assets.screen.blit(Assets.wrong_move, mid)
     board[Pawns.x][Pawns.y].player = Pawns.player_turn
     board[x][y].player = none
     change_players_turn()
@@ -227,11 +247,27 @@ def capture_or_move():
     return True
 
 
+class PawnsTest(unittest.TestCase):
+    """Klasa odpowiadająca za testy."""
+
+    # Test rozmiaru okna.
+    def test_size(self):
+        self.assertEqual(window_size, (210, 220))
+
+    # Failed if winner = True.
+    # Jeśli program nie został wcześniej uruchomiony to Winner = False
+    def test_winner(self):
+        self.assertFalse(Pawns.winner)
+
+
+# Odpowiada za poprawne uruchomienie i działanie programu.
 def main():
+    # Wczytuje obrazy a następnie je wyświetla
     Assets.load()
     menu()
     refresh()
 
+    # Włącza grę i odpowiednio reaguje na napotkane wydarzenia.
     while not Pawns.winner:
 
         events = pygame.event.get()
@@ -242,11 +278,17 @@ def main():
                 pos()
                 if can_select():
                     select(Pawns.x, Pawns.y)
-                    capture_or_move()
+                    if not capture_or_move():
+                        continue
 
         check_winner()
 
 
 if __name__ == '__main__':
+
+    # Testy, zakomentowane na czas sprawdzania programu.
+    # unittest.main()
+
+    # Wywołanie głównej funkcji.
     main()
 
