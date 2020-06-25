@@ -6,14 +6,15 @@
 # Wczytanie wymaganych bibliotek.
 import sys
 
-import unittest
-
 import time
 
 import pygame
 from pygame.locals import *
 
 import math
+
+import assets
+import Pawns_test
 
 pygame.init()
 
@@ -30,27 +31,6 @@ player2_turn = (60, 0)
 
 # Przypisanie wartosci określających gracza
 none, black, white = range(-1, 2)
-
-
-# Wczytywanie grafik.
-class Assets:
-    """Wczytuje grafiki."""
-
-    @staticmethod
-    def load():
-        Assets.background = pygame.image.load('ground.png')
-        Assets.black_pawn = pygame.image.load('black.png')
-        Assets.white_pawn = pygame.image.load('white.png')
-        Assets.blank_slot = pygame.image.load('clear.png')
-        Assets.white_pawn_selected = pygame.image.load('white_selected.png')
-        Assets.black_pawn_selected = pygame.image.load('black_selected.png')
-        Assets.turn = pygame.image.load('turn.png')
-        Assets.no_turn = pygame.image.load('!turn.png')
-        Assets.win_white = pygame.image.load('win1.png')
-        Assets.win_black = pygame.image.load('win2.png')
-        Assets.wrong_move = pygame.image.load('wrong.png')
-        Assets.choose = pygame.image.load('choose.png')
-        Assets.screen = pygame.display.get_surface()
 
 
 # Player_turn odpowiada turze gracza który właśnie wykonuje ruch.
@@ -85,7 +65,12 @@ class Pawns(object):
 
 # Jedynki oznaczają pionki gracza drugiego, natomiast zera, gracza pierwszego.
 # Jedynki oraz zera są zapisane są w komórkach 'player'.
-board = [[Pawns(black, False) if i < 2 else Pawns(white, False) for i in range(0, 4)] for j in range(0, 4)]
+def create_board():
+    return [[Pawns(black, False) if i < 2 else Pawns(white, False) for i in range(0, 4)] for j in range(0, 4)]
+
+
+# Funkcja tworzy plansze wypełnioną pionkami.
+board = create_board()
 
 
 # Funkcja change_player() kończy bieżącą turę
@@ -103,7 +88,6 @@ def change_players_turn():
 def pos():
     x, y = pygame.mouse.get_pos()
     if 210 > x > 180 and 220 > y > 210:
-        print("RESET")
         Pawns.reset = True
     reset()
     while not (length > x >= 10 and width > y >= 10):
@@ -125,12 +109,12 @@ def check_winner():
             elif board[i][j].player == black:
                 b += 1
     if a == 1:
-        Assets.screen.blit(Assets.win_white, (60, 60))
+        assets.Assets.screen.blit(assets.Assets.win_white, (60, 60))
         pygame.display.flip()
         time.sleep(2)
         Pawns.winner = True
     elif b == 1:
-        Assets.screen.blit(Assets.win_black, (60, 60))
+        assets.Assets.screen.blit(assets.Assets.win_black, (60, 60))
         pygame.display.flip()
         time.sleep(2)
         Pawns.winner = True
@@ -138,7 +122,7 @@ def check_winner():
 
 # Wyświetla i odświeża tło.
 def menu():
-    Assets.screen.blit(Assets.background, (0, 0))
+    assets.Assets.screen.blit(assets.Assets.background, (0, 0))
     pygame.display.flip()
 
 
@@ -150,23 +134,23 @@ def refresh():
         for j in range(0, 4):
             place2 = 10 + j * 50
             if board[i][j].player == black:
-                Assets.screen.blit(Assets.black_pawn, (place1, place2))
+                assets.Assets.screen.blit(assets.Assets.black_pawn, (place1, place2))
                 if board[i][j].selected == 1:
-                    Assets.screen.blit(Assets.black_pawn_selected, (place1, place2))
+                    assets.Assets.screen.blit(assets.Assets.black_pawn_selected, (place1, place2))
             elif board[i][j].player == white:
-                Assets.screen.blit(Assets.white_pawn, (place1, place2))
+                assets.Assets.screen.blit(assets.Assets.white_pawn, (place1, place2))
                 if board[i][j].selected == 1:
-                    Assets.screen.blit(Assets.white_pawn_selected, (place1, place2))
+                    assets.Assets.screen.blit(assets.Assets.white_pawn_selected, (place1, place2))
             elif board[i][j].player == none:
-                Assets.screen.blit(Assets.no_turn, player1_turn)
-                Assets.screen.blit(Assets.blank_slot, (place1, place2))
-                Assets.screen.blit(Assets.no_turn, player2_turn)
+                assets.Assets.screen.blit(assets.Assets.no_turn, player1_turn)
+                assets.Assets.screen.blit(assets.Assets.blank_slot, (place1, place2))
+                assets.Assets.screen.blit(assets.Assets.no_turn, player2_turn)
             if Pawns.player_turn == black:
-                Assets.screen.blit(Assets.no_turn, player1_turn)
-                Assets.screen.blit(Assets.turn, player2_turn)
+                assets.Assets.screen.blit(assets.Assets.no_turn, player1_turn)
+                assets.Assets.screen.blit(assets.Assets.turn, player2_turn)
             elif Pawns.player_turn == white:
-                Assets.screen.blit(Assets.no_turn, player2_turn)
-                Assets.screen.blit(Assets.turn, player1_turn)
+                assets.Assets.screen.blit(assets.Assets.no_turn, player2_turn)
+                assets.Assets.screen.blit(assets.Assets.turn, player1_turn)
     pygame.display.flip()
     pygame.event.get()
 
@@ -195,9 +179,10 @@ def can_move2(x0, y0):
 def can_select():
     if (4 > (Pawns.x + i) >= 0 and 4 > (Pawns.y + i) >= 0 for i in [-1, 1]):
         if board[Pawns.x][Pawns.y].player == Pawns.player_turn:
+            print(Pawns.x, Pawns.y)
             return True
         else:
-            Assets.screen.blit(Assets.wrong_move, mid)
+            assets.Assets.screen.blit(assets.Assets.wrong_move, mid)
             pygame.display.flip()
     return False
 
@@ -223,7 +208,7 @@ def can_capture(x0, y0):
         return True
     else:
         pygame.display.flip()
-        Assets.screen.blit(Assets.wrong_move, mid)
+        assets.Assets.screen.blit(assets.Assets.wrong_move, mid)
         return False
 
 
@@ -239,14 +224,14 @@ def capture_or_move():
             pos()
             if board[Pawns.x][Pawns.y].player == Pawns.player_turn and (Pawns.x != x and Pawns.y != y) and reset():
                 pygame.display.flip()
-                Assets.screen.blit(Assets.wrong_move, mid)
+                assets.Assets.screen.blit(assets.Assets.wrong_move, mid)
         if pygame.mouse.get_pressed() == (0, 0, 1):
             deselect(x, y)
             refresh()
             return False
     if board[Pawns.x][Pawns.y].player == Pawns.player_turn and (Pawns.x != x and Pawns.y != y) and reset():
         pygame.display.flip()
-        Assets.screen.blit(Assets.wrong_move, mid)
+        assets.Assets.screen.blit(assets.Assets.wrong_move, mid)
     board[Pawns.x][Pawns.y].player = Pawns.player_turn
     board[x][y].player = none
     change_players_turn()
@@ -254,22 +239,9 @@ def capture_or_move():
     return True
 
 
-class PawnsTest(unittest.TestCase):
-    """Klasa odpowiadająca za testy."""
-
-    # Test rozmiaru okna.
-    def test_size(self):
-        self.assertEqual(window_size, (220, 220))
-
-    # Failed if winner = True.
-    # Jeśli program nie został wcześniej uruchomiony to Winner = False
-    def test_winner(self):
-        self.assertFalse(Pawns.winner)
-
-
 def choose():
     """Funkcja pozwalająca wybrać gracza zaczynającego rozgrywkę."""
-    Assets.screen.blit(Assets.choose, (0, 0))
+    assets.Assets.screen.blit(assets.Assets.choose, (0, 0))
     pygame.display.flip()
     Pawns.player_turn = none
     while Pawns.player_turn == none:
@@ -279,7 +251,6 @@ def choose():
                 sys.exit(0)
             elif pygame.mouse.get_pressed() == (1, 0, 0):
                 x, y = pygame.mouse.get_pos()
-                print(x, y)
                 if 200 > x > 20 and 185 > y > 100:
                     if 105 > x > 20:
                         Pawns.player_turn = black
@@ -308,7 +279,7 @@ def reset():
 # Odpowiada za poprawne uruchomienie i działanie programu.
 def main():
     # Wczytuje obrazy a następnie je wyświetla
-    Assets.load()
+    assets.Assets.load()
     choose()
     menu()
     refresh()
@@ -329,9 +300,6 @@ def main():
 
 
 if __name__ == '__main__':
-
-    # Testy, zakomentowane na czas sprawdzania programu.
-    # unittest.main()
 
     # Wywołanie głównej funkcji.
     main()
