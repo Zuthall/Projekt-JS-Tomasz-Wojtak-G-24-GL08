@@ -49,6 +49,7 @@ class Assets:
         Assets.win_white = pygame.image.load('win1.png')
         Assets.win_black = pygame.image.load('win2.png')
         Assets.wrong_move = pygame.image.load('wrong.png')
+        Assets.choose = pygame.image.load('choose.png')
         Assets.screen = pygame.display.get_surface()
 
 
@@ -59,6 +60,7 @@ class Assets:
 class Pawns(object):
     """Pozwala na utworzenie pionków które przechwoują informacje o tym,
      czy są w danej chwili wybrane oraz o ich właścicielu."""
+    reset = False       # Zmienna służąca do restartowania rozgrywki.
     player_turn = white     # Zaczynaja biale, zmiana wartosci to zmiana tury gracza.
     winner = False
     x, y = 0, 0
@@ -83,7 +85,7 @@ class Pawns(object):
 
 # Jedynki oznaczają pionki gracza drugiego, natomiast zera, gracza pierwszego.
 # Jedynki oraz zera są zapisane są w komórkach 'player'.
-board = [[Pawns(0, False) if i < 2 else Pawns(1, False) for i in range(0, 4)] for j in range(0, 4)]
+board = [[Pawns(black, False) if i < 2 else Pawns(white, False) for i in range(0, 4)] for j in range(0, 4)]
 
 
 # Funkcja change_player() kończy bieżącą turę
@@ -100,7 +102,11 @@ def change_players_turn():
 # Sprawdzając, czy współrzędne nie wychodzą poza obszar planszy.
 def pos():
     x, y = pygame.mouse.get_pos()
-    while not (length > x >= 10 and width> y >= 10):
+    if 210 > x > 180 and 220 > y > 210:
+        print("RESET")
+        Pawns.reset = True
+    reset()
+    while not (length > x >= 10 and width > y >= 10):
         pygame.event.get()
         if pygame.mouse.get_pressed() == (1, 0, 0):
             x, y = pygame.mouse.get_pos()
@@ -152,7 +158,9 @@ def refresh():
                 if board[i][j].selected == 1:
                     Assets.screen.blit(Assets.white_pawn_selected, (place1, place2))
             elif board[i][j].player == none:
+                Assets.screen.blit(Assets.no_turn, player1_turn)
                 Assets.screen.blit(Assets.blank_slot, (place1, place2))
+                Assets.screen.blit(Assets.no_turn, player2_turn)
             if Pawns.player_turn == black:
                 Assets.screen.blit(Assets.no_turn, player1_turn)
                 Assets.screen.blit(Assets.turn, player2_turn)
@@ -229,15 +237,14 @@ def capture_or_move():
         pygame.event.get()
         if pygame.mouse.get_pressed() == (1, 0, 0):
             pos()
-            if board[Pawns.x][Pawns.y].player == Pawns.player_turn and (Pawns.x != x and Pawns.y != y):
+            if board[Pawns.x][Pawns.y].player == Pawns.player_turn and (Pawns.x != x and Pawns.y != y) and reset():
                 pygame.display.flip()
                 Assets.screen.blit(Assets.wrong_move, mid)
         if pygame.mouse.get_pressed() == (0, 0, 1):
-            print("elo")
             deselect(x, y)
             refresh()
             return False
-    if board[Pawns.x][Pawns.y].player == Pawns.player_turn and (Pawns.x != x and Pawns.y != y):
+    if board[Pawns.x][Pawns.y].player == Pawns.player_turn and (Pawns.x != x and Pawns.y != y) and reset():
         pygame.display.flip()
         Assets.screen.blit(Assets.wrong_move, mid)
     board[Pawns.x][Pawns.y].player = Pawns.player_turn
@@ -252,7 +259,7 @@ class PawnsTest(unittest.TestCase):
 
     # Test rozmiaru okna.
     def test_size(self):
-        self.assertEqual(window_size, (210, 220))
+        self.assertEqual(window_size, (220, 220))
 
     # Failed if winner = True.
     # Jeśli program nie został wcześniej uruchomiony to Winner = False
@@ -260,16 +267,54 @@ class PawnsTest(unittest.TestCase):
         self.assertFalse(Pawns.winner)
 
 
+def choose():
+    """Funkcja pozwalająca wybrać gracza zaczynającego rozgrywkę."""
+    Assets.screen.blit(Assets.choose, (0, 0))
+    pygame.display.flip()
+    Pawns.player_turn = none
+    while Pawns.player_turn == none:
+        events = pygame.event.get()
+        for event in events:
+            if event.type == QUIT or (event.type == pygame.KEYDOWN and event.key == K_ESCAPE):
+                sys.exit(0)
+            elif pygame.mouse.get_pressed() == (1, 0, 0):
+                x, y = pygame.mouse.get_pos()
+                print(x, y)
+                if 200 > x > 20 and 185 > y > 100:
+                    if 105 > x > 20:
+                        Pawns.player_turn = black
+                    elif 200 > x > 115:
+                        Pawns.player_turn = white
+
+
+def reset():
+    """Funkcja ta pozwala resetować rozgrywkę podczas jej trwania - wystarczy kliknąc w pole 'reset'"""
+    if Pawns.reset:
+        Pawns.reset = False
+        Pawns.player_turn = none
+        for i in range(0, 4):
+            for j in range(0, 4):
+                board[j][i].selected = False
+                if i < 2:
+                    board[j][i].player = black
+                else:
+                    board[j][i].player = white
+        choose()
+        menu()
+        refresh()
+    return False
+
+
 # Odpowiada za poprawne uruchomienie i działanie programu.
 def main():
     # Wczytuje obrazy a następnie je wyświetla
     Assets.load()
+    choose()
     menu()
     refresh()
 
     # Włącza grę i odpowiednio reaguje na napotkane wydarzenia.
     while not Pawns.winner:
-
         events = pygame.event.get()
         for event in events:
             if event.type == QUIT or (event.type == pygame.KEYDOWN and event.key == K_ESCAPE):
@@ -280,8 +325,7 @@ def main():
                     select(Pawns.x, Pawns.y)
                     if not capture_or_move():
                         continue
-
-        check_winner()
+            check_winner()
 
 
 if __name__ == '__main__':
