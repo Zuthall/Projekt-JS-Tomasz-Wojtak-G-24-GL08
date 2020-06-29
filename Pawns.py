@@ -133,7 +133,7 @@ def check_winner():
             elif board[i][j].player == BLACK:
                 player2_pawns += 1
     if player1_pawns == 1:
-        Assets.screen.blit(Assets.win_WHITE, WINNER_HEIGHT)
+        Assets.screen.blit(Assets.win_white, WINNER_HEIGHT)
         pygame.display.flip()
         time.sleep(WAIT_2_SECONDS)
         Pawns.winner = True
