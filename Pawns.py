@@ -12,7 +12,6 @@ import pygame
 from pygame import locals
 
 
-pygame.display.set_caption('Four Field Kono')
 LENGTH, WIDTH = 220, 220
 WINDOW_SIZE = (LENGTH, WIDTH)
 WINDOW = pygame.display.set_mode(WINDOW_SIZE)
@@ -58,11 +57,7 @@ class Pawns(object):
      Selected = True pozwala wyświetlić wybrany pionek, po wykonaniu ruch oznaczenie jest usuwane.
      Współrzędne x oraz y pozwalają przekazać zapamiętane dane, potrzebne do wykonania np. ruchu.
      """
-
-    reset = False
     player_turn = WHITE
-    winner = False
-    x, y = POINT_ZERO
 
     def __init__(self, player=NULL, selected=False):
         self.player = player
@@ -91,10 +86,7 @@ def create_board():
 
   """
     return [[Pawns(BLACK, False) if i < BOARD_SIZE/2 else Pawns(WHITE, False)
-             for i in range(BOARD_SIZE)] for j in range(BOARD_SIZE)]
-
-
-board = create_board()
+             for i in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
 
 
 def change_players_turn():
@@ -105,7 +97,7 @@ def change_players_turn():
         Pawns.player_turn = WHITE
 
 
-def get_position():
+def get_position(board, do_reset):
     """Funkcja sprawdza pozycje myszki.
 
     Przypisuje konkretne wartości odpowaidające romiezczeniu pionków
@@ -113,17 +105,17 @@ def get_position():
     Sprawdzając, czy wybrane współrzędne nie wychodzą poza obszar planszy."""
     x, y = pygame.mouse.get_pos()
     if LENGTH > y > LENGTH - FRAME_WIDTH > x > RESET_HEIGHT:
-        Pawns.reset = True
-    reset()
+        do_reset = True
+    reset(board, do_reset)
     while not (LENGTH - FRAME_WIDTH > x >= FRAME_WIDTH and WIDTH - FRAME_WIDTH > y >= FRAME_WIDTH):
         pygame.event.get()
         if pygame.mouse.get_pressed() == LEFT_BUTTON_PRESSED:
             x, y = pygame.mouse.get_pos()
     x, y = (x - FRAME_WIDTH) // PAWN_SIZE, (y - FRAME_WIDTH) // PAWN_SIZE
-    Pawns.x, Pawns.y = x, y
+    return x, y
 
 
-def check_winner():
+def check_winner(board):
     """Funkcja sprawdza czy rozgrywka nadal trwa, jeśli nie, wyświetla odpowiedni komunikat."""
     player1_pawns, player2_pawns = POINT_ZERO
     for i in range(BOARD_SIZE):
@@ -136,12 +128,12 @@ def check_winner():
         Assets.screen.blit(Assets.win_white, WINNER_HEIGHT)
         pygame.display.flip()
         time.sleep(WAIT_2_SECONDS)
-        Pawns.winner = True
+        return True
     elif player2_pawns == 1:
         Assets.screen.blit(Assets.win_black, WINNER_HEIGHT)
         pygame.display.flip()
         time.sleep(WAIT_2_SECONDS)
-        Pawns.winner = True
+        return True
 
 
 def menu():
@@ -150,7 +142,7 @@ def menu():
     pygame.display.flip()
 
 
-def refresh():
+def refresh(board):
     """Odpowiada za wyświetlnaie grafik."""
     for i in range(BOARD_SIZE):
         place1 = FRAME_WIDTH + i * PAWN_SIZE
@@ -178,17 +170,17 @@ def refresh():
     pygame.event.get()
 
 
-def can_move1():
+def can_move1(board, remembered_x, remembered_y):
     """Sprawdza czy ruch może się odbyć."""
-    if board[Pawns.x][Pawns.y].player != Pawns.player_turn:
-        if (BOARD_SIZE > (Pawns.x + i) >= 0 and BOARD_SIZE > (Pawns.y + i) >= 0 for i in [-1, 1]):
+    if board[remembered_x][remembered_y].player != Pawns.player_turn:
+        if (BOARD_SIZE > (remembered_x + i) >= 0 and BOARD_SIZE > (remembered_y + i) >= 0 for i in [-1, 1]):
             return True
     return False
 
 
-def can_move2(x0, y0):
+def can_move2(x0, y0, board, remembered_x, remembered_y):
     """Sprawdza czy ruch może się odbyć. Kolejne warunki."""
-    x1, y1 = Pawns.x, Pawns.y
+    x1, y1 = remembered_x, remembered_y
     if abs(x1 - x0) + abs(y1 - y0) == 1:
         if board[x1][y1].player == NULL:
             return True
@@ -196,10 +188,10 @@ def can_move2(x0, y0):
         return False
 
 
-def can_select():
+def can_select(board, remembered_x, remembered_y):
     """Sprawdza czy wybór pionka może się odbyć."""
-    if (4 > (Pawns.x + i) >= 0 and 4 > (Pawns.y + i) >= 0 for i in [-1, 1]):
-        if board[Pawns.x][Pawns.y].player == Pawns.player_turn:
+    if (4 > (remembered_x + i) >= 0 and 4 > (remembered_y + i) >= 0 for i in [-1, 1]):
+        if board[remembered_x][remembered_y].player == Pawns.player_turn:
             return True
         else:
             Assets.screen.blit(Assets.wrong_move, MIDDLE)
@@ -207,22 +199,22 @@ def can_select():
     return False
 
 
-def select(x, y):
+def select(x, y, board):
     board[x][y].selected = True
-    refresh()
+    refresh(board)
 
 
-def deselect(x, y):
+def deselect(x, y, board):
     board[x][y].selected = False
 
 
-def can_capture(x0, y0):
+def can_capture(x0, y0, board, remembered_x, remembered_y):
     """Funkcja sprawdzająca czy można przejąc pionek w określonej sytuacji."""
-    x1, y1 = Pawns.x, Pawns.y
+    x1, y1 = remembered_x, remembered_y
     if (board[(x1 + x0) // 2][(y1 + y0) // 2].player == Pawns.player_turn) and\
             ((abs(x1 - x0) == 2 and abs(y1 - y0) == 0)
              or (abs(y1 - y0) == 2 and abs(x1 - x0) == 0))\
-            and board[Pawns.x][Pawns.y].player != NULL:
+            and board[remembered_x][remembered_y].player != NULL:
         return True
 
     else:
@@ -231,37 +223,41 @@ def can_capture(x0, y0):
     return False
 
 
-def capture_or_move(go_to=(-1, -1)):
+def capture_or_move(board, do_reset, remembered_x, remembered_y, go_to=(-1, -1)):
     """Odpowiada za przemieszczanie się pionków.
 
     Jeśli wszystkie wymagania do wykonania ruchu/przejęcia są spełnione to
     zostanie wykonany, odpowiednio, ruch bądź przejęcie."""
 
-    x, y = Pawns.x, Pawns.y
-    deselect(x, y)
+    x, y = remembered_x, remembered_y
+    deselect(x, y, board)
     if go_to == (-1, -1):
-        while not (can_move1() and (can_capture(x, y) or can_move2(x, y))):
+        while not (can_move1(board, remembered_x, remembered_y) and (
+                can_capture(x, y, board, remembered_x, remembered_y) or
+                can_move2(x, y, board, remembered_x, remembered_y))):
             pygame.event.get()
             if pygame.mouse.get_pressed() == LEFT_BUTTON_PRESSED:
-                get_position()
-                if board[Pawns.x][Pawns.y].player == Pawns.player_turn and (Pawns.x != x and Pawns.y != y) and reset():
+                remembered_x, remembered_y = get_position(board, do_reset)
+                if board[remembered_x][remembered_y].player == Pawns.player_turn and (
+                        remembered_x != x and remembered_y != y) and reset(board, do_reset):
                     pygame.display.flip()
                     Assets.screen.blit(Assets.wrong_move, MIDDLE)
             if pygame.mouse.get_pressed() == RIGHT_BUTTON_PRESSED:
-                deselect(x, y)
-                refresh()
+                deselect(x, y, board)
+                refresh(board)
                 return False
-        if board[Pawns.x][Pawns.y].player == Pawns.player_turn and (Pawns.x != x and Pawns.y != y) and reset():
+        if board[remembered_x][remembered_y].player == Pawns.player_turn and (
+                remembered_x != x and remembered_y != y) and reset(board, do_reset):
             pygame.display.flip()
             Assets.screen.blit(Assets.wrong_move, MIDDLE)
-        board[Pawns.x][Pawns.y].player = Pawns.player_turn
+        board[remembered_x][remembered_y].player = Pawns.player_turn
         board[x][y].player = NULL
         change_players_turn()
-        refresh()
+        refresh(board)
     else:
-        Pawns.x, Pawns.y = go_to
-        if board[Pawns.x][Pawns.y] != Pawns.player_turn:
-            board[Pawns.x][Pawns.y].player = Pawns.player_turn
+        remembered_x, remembered_y = go_to
+        if board[remembered_x][remembered_y] != Pawns.player_turn:
+            board[remembered_x][remembered_y].player = Pawns.player_turn
             board[x][y].player = NULL
             change_players_turn()
     return True
@@ -275,7 +271,8 @@ def choose():
     while Pawns.player_turn == NULL:
         events = pygame.event.get()
         for event in events:
-            if event.type == pygame.locals.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.locals.K_ESCAPE):
+            if event.type == pygame.locals.QUIT or (
+                    event.type == pygame.KEYDOWN and event.key == pygame.locals.K_ESCAPE):
                 sys.exit(0)
             elif pygame.mouse.get_pressed() == LEFT_BUTTON_PRESSED:
                 x, y = pygame.mouse.get_pos()
@@ -286,10 +283,10 @@ def choose():
                         Pawns.player_turn = WHITE
 
 
-def reset():
+def reset(board, do_reset):
     """Funkcja ta pozwala resetować rozgrywkę podczas jej trwania - należy kliknąć w pole 'reset'. """
-    if Pawns.reset:
-        Pawns.reset = False
+    if do_reset:
+        do_reset = False
         Pawns.player_turn = NULL
         for i in range(BOARD_SIZE):
             for j in range(BOARD_SIZE):
@@ -300,31 +297,37 @@ def reset():
                     board[j][i].player = WHITE
         choose()
         menu()
-        refresh()
+        refresh(board)
     return False
 
 
 def main():
     """Odpowiada za poprawne uruchomienie oraz działanie programu."""
+    board = create_board()
+    do_reset = False
+    winner = False
+    remembered_x, remembered_y = POINT_ZERO
+
     pygame.init()
     Assets.load()
+    pygame.display.set_caption('Four Field Kono')
     choose()
     menu()
-    refresh()
+    refresh(board)
 
-    while not Pawns.winner:
+    while not winner:
         events = pygame.event.get()
         for event in events:
-            if event.type == pygame.locals.QUIT or (event.type == pygame.KEYDOWN
-                                                    and event.key == pygame.locals.K_ESCAPE):
+            if event.type == pygame.locals.QUIT or (
+                    event.type == pygame.KEYDOWN and event.key == pygame.locals.K_ESCAPE):
                 sys.exit(0)
             elif pygame.mouse.get_pressed() == LEFT_BUTTON_PRESSED:
-                get_position()
-                if can_select():
-                    select(Pawns.x, Pawns.y)
-                    if not capture_or_move():
+                remembered_x, remembered_y = get_position(board, do_reset)
+                if can_select(board, remembered_x, remembered_y):
+                    select(remembered_x, remembered_y, board)
+                    if not capture_or_move(board, do_reset, remembered_x, remembered_y):
                         continue
-            check_winner()
+            winner = check_winner(board)
 
 
 if __name__ == '__main__':
