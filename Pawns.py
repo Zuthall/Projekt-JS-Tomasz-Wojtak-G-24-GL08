@@ -302,7 +302,6 @@ def main():
     save = False
 
     remembered_x, remembered_y = POINT_ZERO
-    player_turn = WHITE
 
     pygame.init()
     Assets.load()
@@ -328,6 +327,5 @@ def main():
 
 
 if __name__ == '__main__':
-
     main()
 
